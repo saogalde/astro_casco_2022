@@ -1,10 +1,14 @@
 #include "TM.h"
+//#include <LiquidCrystal.h>
+//#include <DS3231.h>
+
 
 TM *tm;
+//int i = 0;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9700);
-  Serial.println("Init");
+  Serial.println(F("Init"));
   tm = new TM();
 }
 
