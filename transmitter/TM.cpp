@@ -50,7 +50,7 @@ TM::TM() {
   display.setFont(u8g2_font_6x10_mn);
   delay(1000);
   #endif
-  
+
   #ifndef RTC_UNAVAILABLE
   Wire.begin();
   #else
@@ -59,18 +59,27 @@ TM::TM() {
   #endif
   #endif
 
-  //if( filename == "" ) filename = getTimestamp(true)+".csv";
-  //logfilename = filename;
-  //logfilename = "DATOS.TXT";
+  // ERROR_PIN to signal an error on the SD card
+  pinMode(ERROR_PIN, OUTPUT);
+  digitalWrite(ERROR_PIN, LOW);
+  // RF_TX_PIN to signal an ongoing transmission
+  pinMode(RF_TX_PIN, OUTPUT);
+  digitalWrite(RF_TX_PIN, LOW);
   
+  /*char foldername[9], logfilename;
+  strcat(foldername, getTimestampFolderName());
+  strcat(foldername, "/");
+  strcat(foldername, getTimestampFolderName());
+  strcat(foldername, getTimestampFolderName());*/
   String foldername = getTimestampFolderName();
   logfilename = foldername+"/"+getTimestampFilename()+".tsv";
+
   // initialize SD card
   #ifndef SD_UNAVAILABLE
-  //pinMode(10, OUTPUT); // change this to 53 on a mega  // don't follow this!!
-  //digitalWrite(10, HIGH); // Add this line
+
   while (!SD.begin(200000,10)) {
     Serial.println(F("Card failed, or not present"));
+    digitalWrite(ERROR_PIN, HIGH); // Add this line
     // don't do anything more:
     #ifndef LCD_UNAVAILABLE
     lcd.print(F("SD NOK, "));
@@ -89,10 +98,11 @@ TM::TM() {
     #endif
     delay(1000);
   }
-  Serial.println("SD OK! ");
+  Serial.println(F("SD OK! "));
+  digitalWrite(ERROR_PIN, LOW); // Add this line
 
   #ifndef LCD_UNAVAILABLE
-  lcd.print("SD OK, ");
+  lcd.print(F("SD OK, "));
   #endif
   #ifndef TINY_SCREEN_UNAVAILABLE
   display.firstPage();
@@ -101,16 +111,16 @@ TM::TM() {
   } while ( display.nextPage() );
   #endif
   
-  delay(1000);
   if(!SD.mkdir(foldername)) {
     Serial.println("Problem creating the folder "+foldername);
+    digitalWrite(ERROR_PIN, HIGH); // Add this line
     //lcd.print("FOLDER NOK");
   }
   else {
     Serial.println("Folder created!");
+    digitalWrite(ERROR_PIN, LOW); // Add this line
     //lcd.print("FOLDER OK");
   }
-  delay(1000);
   //SD.end();
   /*uint8_t O_WRITE = 0X02;
   uint8_t O_APPEND = 0X04;
@@ -139,24 +149,21 @@ TM::TM() {
       Serial.println("Starting LoRa OK!");
 //    lcd.setCursor(0,1);
 //    lcd.print("RF TX OK");
-    delay(1000);
   }
   LoRa.onTxDone(onTxDone);
   #endif
   
-  
-  #ifdef DEBUG
-  Serial.println("Attempting SD card initialization (debug mode)");
-  #endif
 }
 
-int TM::transmitTelemetry(String packet) {
-  buffer = "";
-  buffer.concat(getTimestamp());
-  buffer.concat('\t');
-  buffer.concat(clockReliability());
-  buffer.concat('\t');
-  buffer.concat(packet);
+int TM::transmitTelemetry(char* packet) {
+  char buffer[100];
+  uint8_t errCount = 0;
+  memset(buffer,0,sizeof(buffer));
+  strcat(buffer, getTimestamp().c_str());
+  strcat(buffer, "\t");
+  strcat(buffer, clockReliability());
+  strcat(buffer, "\t");
+  strcat(buffer, packet);
 
   #ifndef SD_UNAVAILABLE
   /*// (O_APPEND | O_WRITE)
@@ -165,6 +172,7 @@ int TM::transmitTelemetry(String packet) {
   //digitalWrite(10, HIGH); // Add this line
   if (!SD.begin(200000,10)) {
     Serial.println("Card failed, or not present");
+    errCount++;
     // don't do anything more:
     /*lcd.print("SD NOK, ");
     delay(1000);
@@ -179,11 +187,14 @@ int TM::transmitTelemetry(String packet) {
     logfile.close();
   } else {
     Serial.println("error opening "+logfilename);
+    errCount++;
   }
   SD.end();
   #endif
+  errCount > 0 ? digitalWrite(ERROR_PIN, HIGH) : digitalWrite(ERROR_PIN, LOW);
 
   #ifndef RF_UNAVAILABLE
+  digitalWrite(RF_TX_PIN,HIGH);
   Serial.print("Sending packet non-blocking: ");
   if (!LoRa.begin(433E6)) {
     Serial.println("Starting LoRa failed!");
@@ -196,6 +207,7 @@ int TM::transmitTelemetry(String packet) {
   }
   LoRa.beginPacket();
   LoRa.println(buffer);
+  
   /*
   lcd.clear();
   lcd.setCursor(0,0);
@@ -217,6 +229,7 @@ int TM::transmitTelemetry(String packet) {
   } while ( display.nextPage() );
   #endif
   LoRa.endPacket(true); // true = async / non-blocking mode
+  digitalWrite(RF_TX_PIN,LOW);
   #endif
   
   
@@ -325,6 +338,7 @@ const char* TM::clockReliability() {
 }
 
 void onTxDone() {
-  Serial.println("TxDone");
+  //Serial.println("TxDone");
+  digitalWrite(RF_TX_PIN,LOW);
   LoRa.end();
 }

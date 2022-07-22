@@ -16,7 +16,7 @@
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 struct AstronautData {
-  char lastTimeStamp[20], tm_Ok[4], t_ext[5], t_1[5], t_2[5]; 
+  char lastTimeStamp[20], tm_Ok[4], t_ext[10], t_1[10], t_2[10]; 
 } astronaut1, astronaut2;
 void testscrolltext(String);
 String buffer = "";
@@ -31,10 +31,10 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
 
-  Serial.println("LoRa Receiver");
+  Serial.println(F("LoRa Receiver"));
 
   if (!LoRa.begin(433E6)) {
-    Serial.println("Starting LoRa failed!");
+    Serial.println(F("Starting LoRa failed!"));
     while (1);
   }
 
@@ -54,7 +54,7 @@ void loop() {
   buffer = "";
   if (packetSize) {
     // received a packet
-    Serial.print("Received packet '");
+    Serial.print(F("Received packet "));
 
     // read packet
     while (LoRa.available()) {
@@ -65,8 +65,8 @@ void loop() {
     //testscrolltext(buffer);
     testscrolltext(astronaut1);
     // print RSSI of packet
-    Serial.print("' with RSSI ");
-    Serial.println(LoRa.packetRssi());
+    //Serial.print(F(" with RSSI "));
+    //Serial.println(LoRa.packetRssi());
     //Serial.println(buffer);
     
   }

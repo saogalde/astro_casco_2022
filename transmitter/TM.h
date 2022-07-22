@@ -17,6 +17,9 @@
 #define LCD_RS A0
 #define LCD_EN A1
 
+#define ERROR_PIN 3
+#define RF_TX_PIN 4
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
@@ -30,7 +33,7 @@
 class TM {
   public:
     TM();
-    int transmitTelemetry(String);
+    int transmitTelemetry(char*);
     DS3231 clock;
     File logfile;
     String logfilename;
